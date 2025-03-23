@@ -1,10 +1,9 @@
-// /api/org/:id
+// /api/org/specific/:id
 
 const express = require("express");
 
 const router = express.Router({ mergeParams: true });
-const capstoneRoutes = require("./capstoneRoutes");
-
+const capstoneRoutes = require("./features/capstone_schedule/capstoneRoutes");
 
 // Routes
 
