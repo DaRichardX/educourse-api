@@ -1,9 +1,9 @@
-const {admin, db} = require("../../utils/firebase-admin");
+const {admin, db} = require("@utils/firebase-admin");
 
 // doc references
-const {getCapstoneMetadataRef} = require("../../utils/firebase-admin");
-const {getSignupLinksRef} = require("../../utils/firebase-admin");
-const {getSignupRef} = require("../../utils/firebase-admin");
+const {getCapstoneMetadataRef} = require("@utils/firebase-admin");
+const {getSignupLinksRef} = require("@utils/firebase-admin");
+const {getSignupRef} = require("@utils/firebase-admin");
 
 
 /**

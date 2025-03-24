@@ -1,3 +1,6 @@
+// module-alias
+require('module-alias/register');
+
 // Setup Express.js
 const functions = require("firebase-functions");
 const express = require("express");
@@ -11,13 +14,13 @@ app.use(cors()); // cors
 app.use(express.json()); // json middleware
 
 // Import middlewares
-const authenticate = require("./middleware/authenticate");
+const authenticate = require('@middlewares/authenticate');
 
 // Import routes
-const authRoutes = require("./routes/public/authRoutes");
-const publicRoutes = require("./routes/public/publicRoutes");
-const userRoutes = require("./routes/authenticated/userRoutes");
-const orgRoutes = require("./routes/authenticated/org/orgRoutes");
+const authRoutes = require("@routes/public/authRoutes");
+const publicRoutes = require("@routes/public/publicRoutes");
+const userRoutes = require("@routes/authenticated/userRoutes");
+const orgRoutes = require("@routes/authenticated/org/orgRoutes");
 
 // public routes
 app.use("/auth", authRoutes);

@@ -1,6 +1,6 @@
-const {admin} = require("../utils/firebase-admin");
+const {admin} = require("@utils/firebase-admin");
 
-const {db} = require("../utils/firebase-admin");
+const {db} = require("@utils/firebase-admin");
 
 // Verify valid token & attach user data
 const authenticate = async (req, res, next) => {

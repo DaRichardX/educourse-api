@@ -1,4 +1,4 @@
-const {admin} = require("../../utils/firebase-admin");
+const {admin} = require("@utils/firebase-admin");
 
 const msg = {
   message: "success",

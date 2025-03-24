@@ -3,12 +3,12 @@
 const express = require("express");
 
 const router = express.Router({ mergeParams: true });
-const {authorize, AUTH_TYPES} = require("../../../../../middleware/authorize")
-const checkPermissions = require("../../../../../middleware/checkPermissions");
+const {authorize, AUTH_TYPES} = require("@middlewares/authorize")
+const checkPermissions = require("@middlewares/checkPermissions");
 
 
 // todo: implement module alias
-const capstoneController = require("../../../../../controllers/org_controllers/capstoneController");
+const capstoneController = require("@controllers/org_controllers/capstoneController");
 
 // Routes
 

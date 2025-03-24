@@ -3,10 +3,10 @@
 const express = require("express");
 
 const router = express.Router();
-const {authorize, AUTH_TYPES} = require("../../../middleware/authorize");
+const {authorize, AUTH_TYPES} = require("@middlewares/authorize");
 
 
-const orgController = require("../../../controllers/org_controllers/orgController");
+const orgController = require("@controllers/org_controllers/orgController");
 
 // protected routes need same organization
 // /api/org/specific/example-org-id-1

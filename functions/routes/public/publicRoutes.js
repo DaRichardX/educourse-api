@@ -3,7 +3,7 @@
 const express = require("express");
 
 const router = express.Router();
-const capstoneController = require("../../controllers/org_controllers/capstoneController");
+const capstoneController = require("@controllers/org_controllers/capstoneController");
 
 // Route to org public routes, to be implemented.
 
