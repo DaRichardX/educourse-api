@@ -1,18 +1,50 @@
-const {admin} = require("../../utils/firebase-admin");
-const db = admin.firestore();
+const {admin, db} = require("../../utils/firebase-admin");
+
+// doc references
+const {getCapstoneMetadataRef} = require("../../utils/firebase-admin");
+const {getSignupLinksRef} = require("../../utils/firebase-admin");
+const {getSignupRef} = require("../../utils/firebase-admin");
 
 
-// POST /api/org/:id/capstone/status
-// Change status of capstone registeration (ex. open/close reg)
-// args: json capstone status
-exports.postStatus = async (req, res) => {
+/**
+ * Updates the capstone registration status.
+ * 
+ * **Endpoint:** `PATCH /api/specific/orgs/:id/capstone/status`
+ * 
+ * This function updates the `isSignupClosed` flag in the `metadata` document of the `capstone_schedule` collection.
+ * 
+ * @param {import("express").Request} req - The Express request object.
+ * @param {import("express").Response} res - The Express response object.
+ * 
+ * @property {string} req.params.id - The organization ID (orgId).
+ * @property {boolean} req.body.isSignupClosed - The new status for capstone signup (true = closed, false = open).
+ * 
+ * @returns {void} Sends a JSON response indicating success or failure.
+ * 
+ * - **400 Bad Request:** If the `isSignupClosed` parameter is missing.
+ * - **500 Internal Server Error:** If an unexpected error occurs.
+ */
+exports.patchStatus = async (req, res) => {
+  try {
+    const { isSignupClosed } = req.body;
+    const orgId = req.params.id;
 
+    if (typeof isSignupClosed !== "boolean") {
+      return res.status(400).json({ error: "Missing or invalid isSignupClosed flag" });
+    }
+
+    // Reference to the metadata document
+    const metadataRef = getCapstoneMetadataRef(orgId);
+
+    // Update the isSignupClosed flag
+    await metadataRef.update({ isSignupClosed });
+    res.status(200).json({ message: `Capstone signup status changed to ${isSignupClosed ? "closed" : "open"}`});
+  } catch (error) {
+    console.error("Error updating signup status:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 };
 
-
-exports.postStatus = async (req, res) => {
-
-};
 
 // ---------- public routes ---------
 
@@ -20,7 +52,7 @@ exports.postStatus = async (req, res) => {
 /**
  * Handles signup for capstone projects.
  * 
- * **Endpoint:** `POST /api/public/org/:id/capstone/signups?id={signupId}`
+ * **Endpoint:** `POST /api/public/org/specific/:id/capstone/signups?id={signupId}`
  * 
  * This function verifies the signup link, ensures it is valid and not expired, and associates the student with a room.
  * 
@@ -50,8 +82,7 @@ exports.postSignup = async (req, res) => {
     }
 
     // Reference to the signup link
-    const signupLinkRef = db.collection("orgs").doc(orgId)
-      .collection("capstone_schedule").doc("signup_links");
+    const signupLinkRef = getSignupLinksRef(orgId);
 
     // Fetch the signup link data
     const signupLinkDoc = await signupLinkRef.get();
@@ -84,8 +115,7 @@ exports.postSignup = async (req, res) => {
     }
 
     // Reference to the signups document
-    const signupRef = db.collection("orgs").doc(orgId)
-      .collection("capstone_schedule").doc("signups");
+    const signupRef = getSignupRef(orgId);
 
     // Update Firestore with student#: room_id
     await signupRef.set({ [student]: room_id }, { merge: true });

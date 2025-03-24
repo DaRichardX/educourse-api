@@ -1,5 +1,7 @@
 const AUTH_TYPES = {
 	SAME_ORG: "same-org",
+	SAME_USER: "",
+	ORG_ADMIN: "",
 };
 
 const authorize = (...authTypes) => {

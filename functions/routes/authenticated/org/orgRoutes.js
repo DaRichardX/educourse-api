@@ -3,8 +3,7 @@
 const express = require("express");
 
 const router = express.Router();
-const {authorize} = require("../../../middleware/authorize");
-const {AUTH_TYPES} = require("../../../middleware/authorize");
+const {authorize, AUTH_TYPES} = require("../../../middleware/authorize");
 
 
 const orgController = require("../../../controllers/org_controllers/orgController");

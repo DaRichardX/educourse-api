@@ -7,7 +7,8 @@ if (!admin.apps.length) {
   admin.app(); // If already initialized, just use the existing app instance
 }
 
+const dbRefs = require("./db-references");
 const db = admin.firestore();
 
 // Export the admin instance to be used elsewhere
-module.exports = {admin, db};
+module.exports = {admin, db, ...dbRefs};

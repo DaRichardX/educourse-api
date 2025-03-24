@@ -3,6 +3,7 @@
 const express = require("express");
 
 const router = express.Router({ mergeParams: true });
+const {authorize, AUTH_TYPES} = require("../../../../../middleware/authorize")
 const checkPermissions = require("../../../../../middleware/checkPermissions");
 
 
@@ -11,7 +12,9 @@ const capstoneController = require("../../../../../controllers/org_controllers/c
 
 // Routes
 
-// add signup
-router.post("/signups", capstoneController.postSignup);
+/* change status of capstone signup
+removed middleware: "authorize(AUTH_TYPES.ORG_ADMIN)" due to no other authenticated org roles
+---> to be implemented in the future once org roles increases. */
+router.patch("/status", capstoneController.patchStatus);
 
 module.exports = router;
