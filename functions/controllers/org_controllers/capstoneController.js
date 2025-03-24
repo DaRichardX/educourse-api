@@ -81,6 +81,16 @@ exports.postSignup = async (req, res) => {
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
+    // Ensure the signup is still open
+    const signupMetadata = getCapstoneMetadataRef(orgId);
+    const signupMetadataDoc = await signupMetadata.get();
+    if (!signupMetadataDoc.exists) {
+      return res.status(404).json({ error: `Document 'metadata' for 'capstone_schedule' not found for org '${orgId}'` });
+    }
+    if (signupMetadataDoc.data().isSignupClosed){
+      return res.status(403).json({ error: `Capstone signup is closed for org '${orgId}'` });
+    }
+
     // Reference to the signup link
     const signupLinkRef = getSignupLinksRef(orgId);
 
