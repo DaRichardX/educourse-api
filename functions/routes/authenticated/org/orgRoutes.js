@@ -13,7 +13,7 @@ const orgController = require("@controllers/org_controllers/orgController");
 router.use("/specific/:id", authorize(AUTH_TYPES.SAME_ORG), require("./specificRoutes"));
 
 // public routes for inter-organization
-router.get("/", orgController.metadata);
+// router.get("/", orgController.metadata);
 
 
 
