@@ -1,9 +1,12 @@
 const {admin, db} = require("@utils/firebase-admin");
+const {generateSecureUUID} = require("@utils/crypto");
 
 // doc references
 const {getCapstoneMetadataRef} = require("@utils/firebase-admin");
 const {getSignupLinksRef} = require("@utils/firebase-admin");
 const {getSignupRef} = require("@utils/firebase-admin");
+
+const EXPIRY_DAYS = 40; // Define link expiry period in days afters creation
 
 
 /**
@@ -24,7 +27,7 @@ const {getSignupRef} = require("@utils/firebase-admin");
  * - **400 Bad Request:** If the `isSignupClosed` parameter is missing.
  * - **500 Internal Server Error:** If an unexpected error occurs.
  */
-exports.patchStatus = async (req, res) => {
+exports.updateStatus = async (req, res) => {
   try {
     const { isSignupClosed } = req.body;
     const orgId = req.params.id;
@@ -45,9 +48,111 @@ exports.patchStatus = async (req, res) => {
   }
 };
 
+/**
+ * Adds a new presenter to an organization.
+ * 
+ * **Endpoint:** `POST /org/specific/:org_id/presentors`
+ * 
+ * This function creates a new presenter in the `presentors` collection within `capstone_schedule` for the specified organization.
+ * 
+ * @param {import("express").Request} req - The Express request object.
+ * @param {import("express").Response} res - The Express response object.
+ * 
+ * @property {string} req.params.org_id - The organization ID (orgId).
+ * @property {string} req.body.presenter_id - The unique presenter ID.
+ * @property {string} req.body.topic - The presenter's topic.
+ * @property {string} req.body.room_id - The ID of the room the presenter is assigned to.
+ * 
+ * @returns {void} Sends a JSON response indicating success or failure.
+ * 
+ * - **400 Bad Request:** If required fields are missing.
+ * - **409 Conflict:** If the presenter already exists.
+ * - **500 Internal Server Error:** If an unexpected error occurs.
+ */
+exports.addPresenter = async (req, res) => {
+  const { org_id } = req.params;
+  const { presenter_id, topic, room_id } = req.body;
 
-// ---------- public routes ---------
+  if (!presenter_id || !topic || !room_id) {
+      return res.status(400).json({ error: "Missing required fields" });
+  }
 
+  try {
+      const presenterRef = db.collection("orgs").doc(org_id).collection("capstone_schedule").doc("presentors");
+      const presenterDoc = await presenterRef.get();
+
+      if (presenterDoc.exists && presenterDoc.data()[presenter_id]) {
+          return res.status(409).json({ error: "Presenter already exists" });
+      }
+
+      await presenterRef.set(
+          {
+              [presenter_id]: {
+                  topic,
+                  room_id,
+              },
+          },
+          { merge: true }
+      );
+
+      return res.status(201).json({ message: "Presenter added successfully", presenter_id });
+  } catch (error) {
+      console.error("Error adding presenter:", error);
+      return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+/**
+ * Updates an existing presenter's details in an organization.
+ * 
+ * **Endpoint:** `PATCH /org/specific/:org_id/presentors/:presenter_id`
+ * 
+ * This function updates a presenter's details within `capstone_schedule` for the specified organization.
+ * 
+ * @param {import("express").Request} req - The Express request object.
+ * @param {import("express").Response} res - The Express response object.
+ * 
+ * @property {string} req.params.org_id - The organization ID (orgId).
+ * @property {string} req.params.presenter_id - The unique presenter ID.
+ * @property {object} req.body - The fields to update (e.g., `{ topic: "New Topic" }`).
+ * 
+ * @returns {void} Sends a JSON response indicating success or failure.
+ * 
+ * - **400 Bad Request:** If `presenter_id` is missing.
+ * - **404 Not Found:** If the presenter does not exist.
+ * - **500 Internal Server Error:** If an unexpected error occurs.
+ */
+exports.updatePresenter = async (req, res) => {
+  const { org_id, presenter_id } = req.params;
+  const updates = req.body;
+
+  if (!presenter_id) {
+      return res.status(400).json({ error: "Presenter ID is required" });
+  }
+
+  try {
+      const presenterRef = db.collection("orgs").doc(org_id).collection("capstone_schedule").doc("presentors");
+      const presenterDoc = await presenterRef.get();
+
+      if (!presenterDoc.exists || !presenterDoc.data()[presenter_id]) {
+          return res.status(404).json({ error: "Presenter not found" });
+      }
+
+      await presenterRef.set(
+          {
+              [presenter_id]: updates,
+          },
+          { merge: true }
+      );
+
+      return res.status(200).json({ message: "Presenter updated successfully", presenter_id });
+  } catch (error) {
+      console.error("Error updating presenter:", error);
+      return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// ---------- Public Routes ---------
 
 /**
  * Handles signup for capstone projects.
@@ -141,3 +246,48 @@ exports.postSignup = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
+
+/**
+ * Generates a map of signup links for students with expiry dates.
+ *
+ * @param {number[]} students - An array of student IDs.
+ * @returns {Object} A map where each key is a UUID and each value is an object containing:
+ *                   - `expiry`: an object with Firestore-compatible timestamp (`_seconds`, `_nanoseconds`).
+ *                   - `student`: the student ID as a string.
+ *                   - `selected`: a boolean indicating if the student has been selected (default: false).
+ *
+ * @example
+ * const students = [2114489, 221592, 224567];
+ * const links = generateLinks(students);
+ * console.log(links);
+ */
+const generateLinks = (students) => {
+  const now = new Date();
+
+  // Calculate expiry timestamp
+  const calculateExpiry = (days) => {
+    const expiryDate = new Date(now);
+    expiryDate.setDate(now.getDate() + days); // Add the days to current date
+    return {
+      "_seconds": Math.floor(expiryDate.getTime() / 1000), // Convert to seconds
+      "_nanoseconds": (expiryDate.getMilliseconds() * 1000000) // Convert to nanoseconds
+    };
+  };
+
+  // Map student IDs to signup links
+  const signupLinksMap = {};
+
+  students.forEach(student => {
+    const uuid = generateSecureUUID();
+    signupLinksMap[uuid] = {
+      "expiry": calculateExpiry(expiryDays),
+      "student": student.toString(),
+      "selected": false
+    };
+  });
+
+  return signupLinksMap;
+};
+
