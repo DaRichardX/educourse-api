@@ -247,6 +247,130 @@ exports.postSignup = async (req, res) => {
   }
 };
 
+/**
+ * Retrieves available room selections and signup details for a given signup link.
+ * 
+ * **Endpoint:** `GET /org/specific/:id/selections?id=:signupId`
+ * 
+ * This function fetches the signup details associated with a `signupId`, checks if the signup link is still valid,
+ * and returns available rooms along with their occupancy data.
+ * 
+ * @param {import("express").Request} req - The Express request object.
+ * @param {import("express").Response} res - The Express response object.
+ * 
+ * @property {string} req.params.id - The organization ID (orgId).
+ * @property {string} req.query.id - The unique signup ID.
+ * 
+ * @returns {void} Sends a JSON response containing signup information and room options.
+ * 
+ * @example
+ * // Example request URL:
+ * GET /org/specific/example/capstone/selections?id=4dd6c4dc-9921-410a-a222-e82c1857c0ad
+ * 
+ * @example
+ * // Example successful response (200 OK)
+ * {
+ *   "student_id": "2114489",
+ *   "selected": true,
+ *   "available_rooms": [
+ *     {
+ *       "roomId": "1A2",
+ *       "teacher": "Ms. Au",
+ *       "capacityPresenters": 5,
+ *       "capacityViewers": 25,
+ *       "currentSignups": 2,
+ *       "availableSpots": 23
+ *     },
+ *     {
+ *       "roomId": "1A3",
+ *       "teacher": "Mr. Smith",
+ *       "capacityPresenters": 4,
+ *       "capacityViewers": 20,
+ *       "currentSignups": 4,
+ *       "availableSpots": 16
+ *     }
+ *   ]
+ * }
+ * 
+ * @throws {400} If the `signupId` query parameter is missing.
+ * @throws {403} If the signup link has expired.
+ * @throws {404} If the signup link or organization data is not found.
+ * @throws {500} If an internal server error occurs.
+ */
+exports.getSelections = async (req, res) => {
+  try {
+    const orgId = req.params.id;
+    const signupId = req.query.id;
+
+    if (!signupId) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    // Reference to the signup link
+    const signupLinkRef = getSignupLinksRef(orgId);
+
+    // Fetch the signup link data
+    const signupLinkDoc = await signupLinkRef.get();
+    if (!signupLinkDoc.exists) {
+      return res.status(404).json({ error: `Document 'signup_links' not found for org '${orgId}'` });
+    }
+
+    const signupLinks = signupLinkDoc.data();
+    const signupData = signupLinks[signupId];
+
+    if (!signupData) {
+      return res.status(404).json({ error: "Invalid signup ID" });
+    }
+
+    const { student: storedStudent, expiry, selected } = signupData;
+
+    // Check if the signup link is expired
+    if (new Date() > expiry.toDate()) {
+      return res.status(403).json({ error: "Signup link expired" });
+    }
+
+    // Fetch organization data, like names
+    const orgRef = db.collection("orgs").doc(orgId);
+    const orgDoc = await orgRef.get();
+
+    if (!orgDoc.exists) {
+      return res.status(404).json({ error: `Organization data not found for org '${orgId}'` });
+    }
+
+    const orgData = orgDoc.data();
+
+    // Fetch room data from org
+    const roomRef = db.collection("orgs").doc(orgId).collection("org_data").doc("rooms");
+    const roomDoc = await roomRef.get();
+
+    if (!roomDoc.exists) {
+        return res.status(404).json({ error: `Room data not found for org '${orgId}'` });
+    }
+  
+    const rooms = roomDoc.data() || {};
+
+    // Format room data with available spots
+    const availableRooms = Object.entries(rooms).map(([roomId, roomDetails]) => ({
+      roomId,
+      teacher: roomDetails.teacher_name,
+      capacityPresenters: parseInt(roomDetails.capacity_presenters, 10),
+      capacityViewers: parseInt(roomDetails.capacity_viewers, 10),
+      currentSignups: roomDetails.current_signups || 0,
+      availableSpots: Math.max(0, roomDetails.capacity_viewers - (roomDetails.current_signups || 0)),
+    }));
+
+    // Return signup info and room availability
+    res.status(200).json({
+      student_id: storedStudent,
+      selected,
+      available_rooms: availableRooms,
+    });
+  } catch (error) {
+    console.error("Error providing signup selection data:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+
 
 
 /**

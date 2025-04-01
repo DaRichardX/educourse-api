@@ -9,6 +9,7 @@ const capstoneController = require("@controllers/org_controllers/capstoneControl
 
 // Currently only /public route
 router.post("/org/specific/:id/capstone/signups", capstoneController.postSignup);
+router.get("/org/specific/:id/capstone/selections", capstoneController.getSelections);
 
 
 module.exports = router;
