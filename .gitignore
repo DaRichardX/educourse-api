@@ -2,3 +2,5 @@ node_modules/
 *.local
 .env
 serviceAccountKey.json
+service-account.json.base64
+.DS_STORE
