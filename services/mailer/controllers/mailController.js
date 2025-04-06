@@ -1,4 +1,4 @@
-const { db } = require("../firebase");
+// const { db } = require("../firebase");
 
 exports.sendMail = async (req, res) => {
   res.status(200).json({ message: "Successfully called sendMail" });
