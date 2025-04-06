@@ -19,7 +19,7 @@ const memoryQueue = new MemoryQueue();
 app.use(auth);
 
 // Mount route at /api/mailer
-app.use("/api/mailer", mailRoutes(memoryQueue));
+app.use("/", mailRoutes(memoryQueue));
 
 // Start server
 const PORT = process.env.PORT || 10001;
