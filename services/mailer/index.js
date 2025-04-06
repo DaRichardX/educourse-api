@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mailRoutes = require("./routes/mailRoutes");
+const auth = require("./middlewares/auth");
 
 const app = express();
 
