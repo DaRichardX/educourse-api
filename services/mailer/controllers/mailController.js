@@ -47,7 +47,9 @@ exports.queueMail = (queue) => async (req, res) => {
         email,
         data: recipient_data[email] || {}
       })),
-      created_at: Date.now()
+      created_at: Date.now(),
+      status: "queued",
+      remaining_recipients: recipient_list.length
     };
 
     // Enqueue mail job
