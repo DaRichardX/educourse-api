@@ -247,6 +247,10 @@ exports.postSignup = async (req, res) => {
   }
 };
 
+
+// TODO: clean up code
+const PRESENTOR_PATH = (orgId) => db.collection("orgs").doc(orgId).collection("capstone_schedule").doc("presentors");
+const STUDENT_PATH = (orgId) => db.collection("orgs").doc(orgId).collection("org_data").doc("students");
 /**
  * Retrieves available room selections and signup details for a given signup link.
  * 
@@ -308,9 +312,8 @@ exports.getSelections = async (req, res) => {
 
     // Reference to the signup link
     const signupLinkRef = getSignupLinksRef(orgId);
-
-    // Fetch the signup link data
     const signupLinkDoc = await signupLinkRef.get();
+
     if (!signupLinkDoc.exists) {
       return res.status(404).json({ error: `Document 'signup_links' not found for org '${orgId}'` });
     }
@@ -329,47 +332,66 @@ exports.getSelections = async (req, res) => {
       return res.status(403).json({ error: "Signup link expired" });
     }
 
-    // Fetch organization data, like names
-    const orgRef = db.collection("orgs").doc(orgId);
-    const orgDoc = await orgRef.get();
-
-    if (!orgDoc.exists) {
-      return res.status(404).json({ error: `Organization data not found for org '${orgId}'` });
-    }
-
-    const orgData = orgDoc.data();
-
-    // Fetch room data from org
+    // Fetch organization room data
     const roomRef = db.collection("orgs").doc(orgId).collection("org_data").doc("rooms");
     const roomDoc = await roomRef.get();
 
     if (!roomDoc.exists) {
-        return res.status(404).json({ error: `Room data not found for org '${orgId}'` });
+      return res.status(404).json({ error: `Room data not found for org '${orgId}'` });
     }
-  
+
     const rooms = roomDoc.data() || {};
 
-    // Format room data with available spots
-    const availableRooms = Object.entries(rooms).map(([roomId, roomDetails]) => ({
-      roomId,
-      teacher: roomDetails.teacher_name,
-      capacityPresenters: parseInt(roomDetails.capacity_presenters, 10),
-      capacityViewers: parseInt(roomDetails.capacity_viewers, 10),
-      currentSignups: roomDetails.current_signups || 0,
-      availableSpots: Math.max(0, roomDetails.capacity_viewers - (roomDetails.current_signups || 0)),
-    }));
+    // Fetch presenters data
+    const presenterRef = PRESENTOR_PATH(orgId);
+    const presenterDoc = await presenterRef.get();
+    const presentersData = presenterDoc.exists ? presenterDoc.data() : {};
 
-    // Return signup info and room availability
+    // Fetch student details data
+    const studentRef = STUDENT_PATH(orgId);
+    const studentDoc = await studentRef.get();
+    const studentData = studentDoc.exists ? studentDoc.data() : {};
+
+    // Lookup for the owner of the signup link
+    const ownerDetails = studentData[storedStudent] || { first_name: "", last_name: "" };
+
+    // Format room data with available spots and presenters
+    const availableRooms = Object.entries(rooms).map(([roomId, roomDetails]) => {
+      // Find presenters assigned to this room
+      const roomPresenters = Object.entries(presentersData)
+        .filter(([studentId, presenterInfo]) => presenterInfo.room_id === roomId)
+        .map(([studentId, presenterInfo]) => {
+          const studentInfo = studentData[studentId] || { first_name: "", last_name: "" };
+          return {
+            topic: presenterInfo.topic,
+            name: `${studentInfo.first_name} ${studentInfo.last_name}`.trim()
+          };
+        });
+
+      return {
+        roomId,
+        teacher: roomDetails.teacher_name,
+        capacityPresenters: parseInt(roomDetails.capacity_presenters, 10),
+        capacityViewers: parseInt(roomDetails.capacity_viewers, 10),
+        currentSignups: roomDetails.current_signups || 0,
+        availableSpots: Math.max(0, roomDetails.capacity_viewers - (roomDetails.current_signups || 0)),
+        presenters: roomPresenters
+      };
+    });
+
+    // Return signup info, link owner's name, and room availability
     res.status(200).json({
       student_id: storedStudent,
       selected,
+      first_name: ownerDetails.first_name,
+      last_name: ownerDetails.last_name,
       available_rooms: availableRooms,
     });
   } catch (error) {
     console.error("Error providing signup selection data:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-}
+};
 
 
 
