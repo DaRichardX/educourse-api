@@ -6,11 +6,11 @@ function renderTemplate(template, data) {
 }
 
 exports.processMailQueue = async (queue, sendLimit = 20) => {
-  console.log(`[MailerWorker] Fetching jobs from queue...`);
+  // console.log(`[MailerWorker] Fetching jobs from queue...`);
   const jobs = await queue.getAllJobs();
 
   if (!jobs.length) {
-    console.log(`[MailerWorker] ✅ No pending mail jobs`);
+    // console.log(`[MailerWorker] ✅ No pending mail jobs`);
     return;
   }
 
